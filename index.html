@@ -1,766 +1,313 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>HAQ | Chat Bot</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
-  <style>
-    [dir="rtl"], [lang="ar"] { font-family: 'Amiri', serif; font-size: 1.2rem; line-height: 1.9; text-align: right; direction: rtl; }
-    .chat-title-input { padding: 6px 8px; border: 1.5px solid #000; border-radius: 8px; font-size: 14px; background: white; outline: none; }
-    .chat-title-input:focus { box-shadow: 0 0 0 2px rgba(0,0,0,0.1); }
-    hr { border: none; border-top: 1px dashed #ddd; margin: 16px 0; }
-  </style>
-  <!-- Firebase v9 (modular) -->
-<script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
-<script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
-<script type="module" src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <meta charset="UTF-8">
+  <title>HAQ Simple Chat (Fixed)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
 
+  <style>
+    .quran-arabic { font-family: 'Amiri', serif; font-size: 22px; direction: rtl; text-align: right; margin-bottom: 8px; }
+    .message-bot { background:#f4f4f4; padding:10px 14px; border-radius:10px; margin:8px 0; }
+    .message-user { background:#000; color:#fff; padding:10px 14px; border-radius:10px; margin:8px 0; text-align:right; }
+    .chat-box { max-width:800px; margin:20px auto 0; height:70vh; border:1px solid #ccc; overflow-y:auto; padding:20px; background:#fff; }
+    .input-area { max-width:800px; margin:12px auto; display:flex; gap:8px; padding:10px; }
+    #userInput { flex:1; padding:12px; font-size:16px; }
+    button { padding:10px 14px; cursor:pointer; }
+    .auth-popup { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:none; justify-content:center; align-items:center; }
+    .auth-box { background:#fff; padding:20px; border-radius:8px; width:320px; }
+    .auth-box input { width:100%; padding:10px; margin-top:8px; }
+  </style>
 </head>
 <body>
 
-<div id="google_translate_element" 
-     style="position:absolute; top:10px; right:10px; z-index:9999;"></div>
-
-<!-- AUTH SCREEN -->
-<div id="authScreen" class="auth-container">
-  <div class="auth-box">
-    <h2>Sign in / Register</h2>
-
-    <input id="inputUsername" placeholder="Username (unique)" type="text" />
-    <input id="inputEmail" placeholder="Email" type="email" />
-    <input id="inputPassword" placeholder="Password" type="password" />
-
-    <button id="registerBtn">Register</button>
-    <button id="loginBtn" class="secondary">Login</button>
-
-    <p id="authMessage"></p>
-
-    <div style="margin-top:10px; font-size:13px; color:#555;">
-      <small>By registering you accept terms. Use a real email — verification optional.</small>
-    </div>
-  </div>
-</div>
-
-
-<div class="app">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="logo">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2 17L12 22L22 17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M2 12L12 17L22 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-      <span>HAQ</span>
-    </div>
-
-    <button class="new-chat-btn">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M12 5v14m-7-7h14"/>
-      </svg>
-      New Chat
-    </button>
-
-    <div class="chat-list" id="chatHistory"></div>
-  </aside>
-
-  <!-- Main Chat -->
-  <main class="chat-main">
-    <div class="messages" id="messages"></div>
-
-    <div class="typing-indicator" id="typingIndicator" hidden>
-      <span></span><span></span><span></span>
-    </div>
-
-    <div class="input-area">
-      <div class="input-wrapper">
-
-  <div class="input-box">
-    <span class="plus">+</span>
-    <textarea id="userInput" placeholder="Ask anything..." rows="1"></textarea>
-  </div>
-
-  <div class="input-icons">
-
-    <!-- Islam Topic Button -->
-    <button class="circle-btn small" id="islamBtn" title="What does Islam say about">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <text x="12" y="16" text-anchor="middle" font-size="14" fill="white">?</text>
-      </svg>
-    </button>
-
-    <!-- Find Button -->
-    <button class="circle-btn small" id="findBtn" title="Find">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
-        <circle cx="11" cy="11" r="7"></circle>
-        <line x1="16" y1="16" x2="21" y2="21"></line>
-      </svg>
-    </button>
-
-    <!-- Send Button -->
-    <button id="sendBtn" disabled>
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M22 2L11 13M22 2L15 22L11 13L22 2Z"/>
-      </svg>
-    </button>
-
-  </div>
-
-</div>
-
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M22 2L11 13M22 2L15 22L11 13L22 2Z"/>
-          </svg>
-        </button>
+  <!-- Auth modal -->
+  <div class="auth-popup" id="authScreen">
+    <div class="auth-box">
+      <h3>Login / Register</h3>
+      <input id="authEmail" type="email" placeholder="Email">
+      <input id="authPass" type="password" placeholder="Password">
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="loginBtn">Login</button>
+        <button id="registerBtn">Register</button>
+        <button id="closeAuthBtn">Close</button>
       </div>
+      <p id="authMsg" style="color:red;margin-top:8px;"></p>
     </div>
-  </main>
-</div>
+  </div>
 
-<script type="module">
-  // ---- FIREBASE INIT & AUTH + FIRESTORE username system ----
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
+  <h2 style="text-align:center;margin-top:18px;">HAQ Chat</h2>
 
-  // <-- PASTE/VERIFY YOUR firebaseConfig BELOW -->
-const firebaseConfig = {
-  apiKey: "AIzaSyCx41N_RyS2n2FL8UREFkKCO0OwNCm30XY",
-  authDomain: "haq-chatbot.firebaseapp.com",
-  projectId: "haq-chatbot",
-  storageBucket: "haq-chatbot.firebasestorage.app",
-  messagingSenderId: "90215121958",
-  appId: "1:90215121958:web:a5d71657a1a739effd12e7"
-};
+  <div class="chat-box" id="messages" aria-live="polite" role="log"></div>
 
-  const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db = getFirestore(app);
+  <div class="input-area">
+    <input id="userInput" placeholder="Ask something..." autocomplete="off" />
+    <button id="islamBtn" title="What does Islam say about">?</button>
+    <button id="findBtn" title="Find">Find</button>
+    <button id="sendBtn" disabled>Send</button>
+  </div>
 
-  // DOM refs
-  const authScreen = document.getElementById("authScreen");
-  const inputUsername = document.getElementById("inputUsername");
-  const inputEmail = document.getElementById("inputEmail");
-  const inputPassword = document.getElementById("inputPassword");
-  const registerBtn = document.getElementById("registerBtn");
-  const loginBtn = document.getElementById("loginBtn");
-  const authMessage = document.getElementById("authMessage");
+  <!-- Main module script: imports Firebase modules and the app logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
-  function showAuthMessage(msg, color = "red") {
-    authMessage.style.color = color;
-    authMessage.innerText = msg;
-  }
-
-  // --- Helper: check username uniqueness in Firestore ---
-  async function isUsernameTaken(username) {
-    if (!username) return true;
-    const usernameDocRef = doc(db, "usernames", username.toLowerCase());
-    const snap = await getDoc(usernameDocRef);
-    return snap.exists();
-  }
-
-  // --- Register flow ---
-  registerBtn.addEventListener("click", async () => {
-    const username = (inputUsername.value || "").trim();
-    const email = (inputEmail.value || "").trim();
-    const password = (inputPassword.value || "");
-
-    if (!username || username.length < 3) return showAuthMessage("Username minimum 3 chars.");
-    if (!email) return showAuthMessage("Enter email.");
-    if (!password || password.length < 6) return showAuthMessage("Password min 6 chars.");
-
-    try {
-      // check username
-      const taken = await isUsernameTaken(username);
-      if (taken) return showAuthMessage("Username already taken. Choose another.");
-
-      // create auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // save username -> uid (document id = username)
-      await setDoc(doc(db, "usernames", username.toLowerCase()), {
-        uid: user.uid,
-        createdAt: serverTimestamp()
-      });
-
-      // save user profile
-      await setDoc(doc(db, "users", user.uid), {
-        username: username,
-        email: email,
-        createdAt: serverTimestamp()
-      });
-
-      showAuthMessage("Registered. Signing in...", "green");
-      // onAuthStateChanged handler will hide auth screen
-    } catch (err) {
-      console.error("Register error:", err);
-      showAuthMessage(err.message || "Registration failed.");
-    }
-  });
-
-  // --- Login flow (by email/password) ---
-  loginBtn.addEventListener("click", async () => {
-    const email = (inputEmail.value || "").trim();
-    const password = (inputPassword.value || "");
-    if (!email || !password) return showAuthMessage("Enter email & password.");
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      showAuthMessage("Login successful.", "green");
-    } catch (err) {
-      console.error("Login error:", err);
-      showAuthMessage(err.message || "Login failed.");
-    }
-  });
-
-  // --- Auth state listener: hide/show auth screen and update UI ---
-  onAuthStateChanged(auth, async (user) => {
-    if (user) {
-      // fetch profile doc (username)
-      try {
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        const profile = userDoc.exists() ? userDoc.data() : { username: null, email: user.email };
-        // Hide auth and show UI
-        authScreen.style.display = "none";
-        // Add logged-in display (if you want to show username in UI)
-        ensureLogoutButton(profile.username || user.email);
-      } catch (err) {
-        console.error("Fetching profile error:", err);
-        authScreen.style.display = "none";
-        ensureLogoutButton(user.email);
-      }
-    } else {
-      // Not logged in
-      authScreen.style.display = "flex";
-      removeLogoutButton();
-    }
-  });
-
-  // --- Logout helper: adds a sign out button to the sidebar header ---
-  function ensureLogoutButton(displayName) {
-    let container = document.querySelector(".logo");
-    if (!container) return;
-    // Avoid duplicate
-    if (document.getElementById("logoutWrap")) return;
-
-    const wrap = document.createElement("div");
-    wrap.id = "logoutWrap";
-    wrap.style.marginLeft = "auto";
-    wrap.style.display = "flex";
-    wrap.style.alignItems = "center";
-    wrap.style.gap = "8px";
-
-    const nameEl = document.createElement("div");
-    nameEl.style.fontSize = "13px";
-    nameEl.style.color = "#333";
-    nameEl.textContent = displayName ? displayName : "User";
-
-    const btn = document.createElement("button");
-    btn.textContent = "Logout";
-    btn.style.padding = "6px 10px";
-    btn.style.borderRadius = "8px";
-    btn.style.background = "#000";
-    btn.style.color = "#fff";
-    btn.style.border = "none";
-    btn.style.cursor = "pointer";
-    btn.onclick = async () => {
-      await signOut(auth);
-      // optionally clear local UI state
-      showAuthMessage("");
-      inputUsername.value = "";
-      inputEmail.value = "";
-      inputPassword.value = "";
-      authScreen.style.display = "flex";
+    // ---------- CONFIG ----------
+    const firebaseConfig = {
+      apiKey: "REPLACE",
+      authDomain: "REPLACE",
+      projectId: "REPLACE",
+      storageBucket: "REPLACE",
+      messagingSenderId: "REPLACE",
+      appId: "REPLACE"
     };
 
-    wrap.appendChild(nameEl);
-    wrap.appendChild(btn);
-    // append to .logo (left area). If layout differs, append elsewhere.
-    container.appendChild(wrap);
-  }
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
 
-  function removeLogoutButton() {
-    const el = document.getElementById("logoutWrap");
-    if (el) el.remove();
-  }
+    // ---------- STATE ----------
+    let currentUser = null;
+    let quranArabic = null;
+    let quranEnglish = null;
 
-  // End of module script
-</script>
+    // ---------- DOM ----------
+    const messagesDiv = document.getElementById("messages");
+    const inputEl = document.getElementById("userInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const islamBtn = document.getElementById("islamBtn");
+    const findBtn = document.getElementById("findBtn");
 
+    const authScreen = document.getElementById("authScreen");
+    const authEmail = document.getElementById("authEmail");
+    const authPass = document.getElementById("authPass");
+    const loginBtn = document.getElementById("loginBtn");
+    const registerBtn = document.getElementById("registerBtn");
+    const closeAuthBtn = document.getElementById("closeAuthBtn");
+    const authMsg = document.getElementById("authMsg");
 
-<script>
-// ====== AUTH SYSTEM ======
+    // ---------- UTIL ----------
+    function safeText(s){ return s===undefined||s===null ? "" : String(s); }
 
-function getUsers() {
-    return JSON.parse(localStorage.getItem("users") || "{}");
-}
-
-function saveUsers(users) {
-    localStorage.setItem("users", JSON.stringify(users));
-}
-
-function showMessage(msg) {
-    document.getElementById("authMessage").innerText = msg;
-}
-
-document.getElementById("loginBtn").onclick = function () {
-    const username = authUsername.value.trim();
-    const password = authPassword.value.trim();
-    const users = getUsers();
-
-    if (!users[username]) {
-        return showMessage("User not found.");
-    }
-    if (users[username] !== password) {
-        return showMessage("Wrong password.");
+    function appendUser(text){
+      const d = document.createElement("div");
+      d.className = "message-user";
+      d.textContent = text;
+      messagesDiv.appendChild(d);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      saveMessageToFirestore('user', text);
     }
 
-    localStorage.setItem("loggedInUser", username);
-    authScreen.style.display = "none";
-};
-
-document.getElementById("registerBtn").onclick = function () {
-    const username = authUsername.value.trim();
-    const password = authPassword.value.trim();
-    const users = getUsers();
-
-    if (users[username]) {
-        return showMessage("Username already taken.");
+    function appendBotHtml(html){
+      const d = document.createElement("div");
+      d.className = "message-bot";
+      d.innerHTML = html;
+      messagesDiv.appendChild(d);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      saveMessageToFirestore('bot', html);
     }
 
-    if (username.length < 3) return showMessage("Username too short.");
-    if (password.length < 4) return showMessage("Password too weak.");
-
-    users[username] = password;
-    saveUsers(users);
-
-    showMessage("Account created! You can log in now.");
-};
-
-// Auto-login check
-window.onload = () => {
-    const loggedIn = localStorage.getItem("loggedInUser");
-    if (loggedIn) {
-        authScreen.style.display = "none";
-    }
-};
-
-
-// === FULL QURAN DATA (your existing one stays the same) ===
-const quranData = [
-  {"id":1,"name":"الفاتحة","transliteration":"Al-Fatihah","type":"meccan","total_verses":7,"verses":[
-    {"id":1,"text":"بِسۡمِ ٱللَّهِ ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ"},
-    {"id":2,"text":"ٱلۡحَمۡدُ لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ"},
-    {"id":3,"text":"ٱلرَّحۡمَٰنِ ٱلرَّحِيمِ"},
-    {"id":4,"text":"مَٰلِكِ يَوۡمِ ٱلدِّينِ"},
-    {"id":5,"text":"إِيَّاكَ نَعۡبُدُ وَإِيَّاكَ نَسۡتَعِينُ"},
-    {"id":6,"text":"ٱهۡدِنَا ٱلصِّرَٰطَ ٱلۡمُسۡتَقِيمَ"},
-    {"id":7,"text":"صِرَٰطَ ٱلَّذِينَ أَنۡعَمۡتَ عَلَيۡهِمۡ غَيۡرِ ٱلۡمَغۡضُوبِ عَلَيۡهِمۡ وَلَا ٱلضَّآلِّينَ"}
-  ]}
-  // ... keep the rest of your Quran data here ...
-];
-
-// ============= LOAD REAL HADITH JSON =============
-let hadithData = [];
-
-fetch("hadith-bukhari.json")
-  .then(res => res.json())
-  .then(data => { 
-      hadithData = data;
-      console.log("Hadith JSON Loaded:", hadithData.length);
-  })
-  .catch(err => console.error("Hadith JSON Load Error:", err));
-
-
-// ============= LOAD TOPICS (topics_generated.json) =============
-let topicsData = null;
-
-fetch("data/topics_generated.json")
-  .then(res => {
-    if (!res.ok) throw new Error("Topics HTTP " + res.status);
-    return res.json();
-  })
-  .then(data => {
-    topicsData = data;
-    console.log("Topics loaded:", Object.keys(topicsData).length);
-  })
-  .catch(err => console.error("Topics Load Error:", err));
-
-// === Helper: find ayah by chapter & verse ===
-function findByChapterVerse(surahNum, verseNum) {
-  const surahIndex = surahNum - 1;
-  if (surahIndex < 0 || surahIndex >= quranData.length) {
-    return `Surah ${surahNum} not found.`;
-  }
-  const surah = quranData[surahIndex];
-  const ayah = surah.verses.find(v => v.id === verseNum);
-  if (!ayah) {
-    return `Ayah ${verseNum} in Surah ${surahNum} not found.`;
-  }
-  return `
-    <strong>Surah #${surahNum}: ${surah.name}</strong><br>
-    <b>Ayah ${ayah.id}</b><br>
-    <span dir="rtl" lang="ar">${ayah.text}</span>
-  `;
-}
-
-// === Helper: semantic topic search using topics_generated.json ===
-function searchTopicSemantic(query) {
-  if (!topicsData) return "Topics not loaded yet.";
-  query = query.toLowerCase();
-
-  for (const key in topicsData) {
-    const topic = topicsData[key];
-    if (!topic || !topic.phrases) continue;
-
-    for (const phrase of topic.phrases) {
-      if (phrase && query.includes(String(phrase).toLowerCase())) {
-        return findByChapterVerse(topic.surah, topic.ayah);
+    // ---------- LOAD QURAN (defensive) ----------
+    async function loadQuran(){
+      try {
+        const [aRes, eRes] = await Promise.all([
+          fetch("quran.json"),
+          fetch("quran_english.json")
+        ]);
+        if (!aRes.ok) throw new Error("Failed to fetch quran.json: " + aRes.status);
+        if (!eRes.ok) throw new Error("Failed to fetch quran_english.json: " + eRes.status);
+        quranArabic = await aRes.json();
+        quranEnglish = await eRes.json();
+        console.log("Quran files loaded");
+      } catch (err) {
+        console.error("Error loading Quran files:", err);
+        appendBotHtml("Error loading Quran data. Ensure <code>data/quran.json</code> and <code>data/quran_english.json</code> exist and are served via HTTP.");
       }
     }
-  }
+    loadQuran();
 
-  return "No related topic found in the Quran.";
-}
+    // ---------- PARSER ----------
+    function parseQuery(q){
+      if(!q) return null;
+      const text = q.toLowerCase().trim();
 
-// === Helper: chapter range / first-N search ===
-function getChapterRange(surahNum, startAyah, endAyah) {
-  const surahIndex = surahNum - 1;
-  if (surahIndex < 0 || surahIndex >= quranData.length) {
-    return `Surah ${surahNum} not found.`;
-  }
-  const surah = quranData[surahIndex];
+      // 1) colon e.g. 2:255
+      const m1 = text.match(/^(\\d{1,3})\\s*:\\s*(\\d{1,3})$/);
+      if(m1) return { type: "ayah", surah: Number(m1[1]), ayah: Number(m1[2]) };
 
-  if (startAyah > endAyah) {
-    const tmp = startAyah;
-    startAyah = endAyah;
-    endAyah = tmp;
-  }
+      // 2) "chapter 1 verse 2" or "surah 2 ayah 255"
+      const m2 = text.match(/(chapter|surah)\\s+(\\d{1,3}).*?(verse|ayah|ayat)\\s*(\\d{1,3})/);
+      if(m2) return { type: "ayah", surah: Number(m2[2]), ayah: Number(m2[4]) };
 
-  const verses = surah.verses.filter(v => v.id >= startAyah && v.id <= endAyah);
-  if (!verses.length) {
-    return `No ayahs found in range ${startAyah}-${endAyah} for Surah ${surahNum}.`;
-  }
+      // 3) whole chapter: "chapter 2" or "surah 36"
+      const m3 = text.match(/(?:chapter|surah)\\s+(\\d{1,3})$/);
+      if(m3) return { type: "chapter", surah: Number(m3[1]) };
 
-  let output = `
-    <strong>Surah #${surahNum}: ${surah.name} – Ayahs ${startAyah}-${endAyah}</strong><br><br>
-  `;
+      return null;
+    }
 
-  verses.forEach(v => {
-    output += `
-      <div class="result-block">
-        <b>Ayah ${v.id}</b><br>
-        <span dir="rtl" lang="ar">${v.text}</span>
-      </div>
-      <hr>
-    `;
-  });
+    // ---------- LOOKUPS ----------
+    function getSurahArabic(num){
+      return quranArabic && quranArabic.data && Array.isArray(quranArabic.data.surahs)
+        ? quranArabic.data.surahs.find(s => Number(s.number) === Number(num))
+        : null;
+    }
 
-  return output;
-}
-// === DOM ===
-const $ = id => document.getElementById(id);
-const messagesEl = $('messages');
-const userInput = $('userInput');
-const sendBtn = $('sendBtn');
-const chatHistory = $('chatHistory');
-const newChatBtn = document.querySelector('.new-chat-btn');
-const typingIndicator = $('typingIndicator');
+    function getSurahEnglish(num){
+      return quranEnglish && quranEnglish.data && Array.isArray(quranEnglish.data.surahs)
+        ? quranEnglish.data.surahs.find(s => Number(s.number) === Number(num))
+        : null;
+    }
 
-// === Storage ===
-const STORAGE_KEY = 'grok_full_chats_v3';
-let chats = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
-let currentChatId = null;
+    function getAyah(surah, ayah){
+      const sA = getSurahArabic(surah);
+      const sE = getSurahEnglish(surah);
+      if(!sA || !sE) return null;
+      const aA = Array.isArray(sA.ayahs) ? sA.ayahs.find(x => Number(x.numberInSurah) === Number(ayah)) : null;
+      const aE = Array.isArray(sE.ayahs) ? sE.ayahs.find(x => Number(x.numberInSurah) === Number(ayah)) : null;
+      if(!aA || !aE) return null;
+      return { name: safeText(sA.englishName), arabic: safeText(aA.text), english: safeText(aE.text) };
+    }
 
-function saveChats() { localStorage.setItem(STORAGE_KEY, JSON.stringify(chats)); }
-function formatTime() { return new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); }
-function truncate(str, len = 30) { return str.length > len ? str.slice(0, len) + '.' : str; }
+    function getFullChapter(surah){
+      const sA = getSurahArabic(surah);
+      const sE = getSurahEnglish(surah);
+      if(!sA || !sE) return null;
+      return {
+        name: safeText(sA.englishName),
+        arabic: Array.isArray(sA.ayahs) ? sA.ayahs.map(x => ({ num: x.numberInSurah, text: x.text })) : [],
+        english: Array.isArray(sE.ayahs) ? sE.ayahs.map(x => ({ num: x.numberInSurah, text: x.text })) : []
+      };
+    }
 
-// === Allow HTML ===
-function addMessageToDOM(html, role = 'user') {
-  const msg = document.createElement('div');
-  msg.className = `message ${role}`;
-  msg.innerHTML = `<div class="bubble"><div class="text">${html}</div><div class="time">${formatTime()}</div></div>`;
-  messagesEl.appendChild(msg);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
-}
-
-function showTyping() { typingIndicator.hidden = false; setTimeout(() => typingIndicator.hidden = true, 1000); }
-
-// === Arabic Normalizer ===
-function normalizeArabic(str) {
-  return str
-    .replace(/[\u0617-\u061A\u064B-\u065F]/g, '')
-    .replace(/[أإآ]/g, 'ا')
-    .replace(/ة/g, 'ه')
-    .replace(/ى/g, 'ي')
-    .trim();
-}
-
-// === Search (Quran + REAL hadith JSON) ===
-function searchJsonFiles(query) {
-  const q = normalizeArabic(query);
-  let results = [];
-
-  // Quran
-  quranData.forEach((surah, i) => {
-    const surahNum = i + 1;
-    surah.verses.forEach(v => {
-      if (normalizeArabic(v.text).includes(q)) {
-        results.push(`<strong>Surah #${surahNum}: ${surah.name} (Verse ${v.id})</strong><br><span dir="rtl" lang="ar">${v.text}</span>`);
+    // ---------- FIRESTORE SAVE (only when signed-in) ----------
+    function ensureChatId(){
+      let id = localStorage.getItem("lastChatId");
+      if(!id){
+        id = "chat_" + Date.now();
+        localStorage.setItem("lastChatId", id);
       }
-    });
-  });
+      return id;
+    }
 
-  // Hadith (REAL JSON)
-  let counter = 1;
-  hadithData.forEach(vol => {
-    vol.books.forEach(book => {
-      book.hadiths.forEach(h => {
-        if (normalizeArabic(h.text).includes(q)) {
-          results.push(`
-            <strong>Hadith #${counter}</strong>: ${vol.name} → ${book.name}<br>
-            <em>${h.info}</em><br>
-            <span dir="rtl" lang="ar">${h.text}</span>
-          `);
-          counter++;
+    async function saveMessageToFirestore(role, content){
+      if(!currentUser) return;
+      try {
+        const uid = currentUser.uid;
+        const chatId = ensureChatId();
+        await addDoc(collection(db, "users", uid, "chats", chatId, "messages"), {
+          role: role,
+          content: content,
+          createdAt: serverTimestamp()
+        });
+        await setDoc(doc(db, "users", uid, "chats", chatId), { lastUpdated: serverTimestamp(), title: localStorage.getItem(chatId + "_title") || null }, { merge: true });
+      } catch (err) {
+        console.warn("saveMessageToFirestore failed", err);
+      }
+    }
+
+    // ---------- PROCESS MESSAGE ----------
+    function processQuranRequest(text){
+      const parsed = parseQuery(text);
+      if(!parsed) return null;
+
+      if(parsed.type === "ayah"){
+        const r = getAyah(parsed.surah, parsed.ayah);
+        if(!r) return "<div>Ayah not found. Check chapter and verse numbers.</div>";
+        var out = "";
+        out += "<div class='quran-arabic'>" + escapeHtml(r.arabic) + "</div>";
+        out += "<div style='margin-top:8px; font-weight:700;'>" + escapeHtml(r.name) + " " + parsed.surah + ":" + parsed.ayah + "</div>";
+        out += "<div style='margin-top:6px;'>" + escapeHtml(r.english) + "</div>";
+        return out;
+      }
+
+      if(parsed.type === "chapter"){
+        const ch = getFullChapter(parsed.surah);
+        if(!ch) return "<div>Chapter not found.</div>";
+        var html = "<div style='font-weight:700;margin-bottom:8px;'>" + escapeHtml(ch.name) + " — Surah " + parsed.surah + "</div>";
+        for(var i = 0; i < ch.arabic.length; i++){
+          var a = ch.arabic[i];
+          var e = ch.english[i] || { text: "" };
+          html += "<div style='margin-bottom:10px;'><div style='font-weight:600'>Ayah " + escapeHtml(String(a.num)) + "</div>";
+          html += "<div class='quran-arabic'>" + escapeHtml(a.text) + "</div>";
+          html += "<div style='margin-top:6px;'>" + escapeHtml(e.text) + "</div></div><hr />";
         }
-      });
-    });
-  });
-
-  return results.length
-    ? `<strong>I found this:</strong><br><br>${results.join('<hr>')}`
-    : `No matches found for "<strong>${query}</strong>" in Quran or Hadith.`;
-}
-
-// === Chat Logic ===
-function newChat() {
-  messagesEl.innerHTML = `<div class="welcome"><h1>Welcome to Haq ChatBot</h1><p>Don't fully depend on this because it is made by a human which can make mistakes.<br>Try "Find الرحمن" to verify.</p></div>`;
-  currentChatId = null;
-  updateActiveChat();
-}
-function ensureChatExists() {
-  if (currentChatId) return chats.find(c => c.id === currentChatId);
-  const id = Date.now();
-  const chat = { id, messages: [], title: null, timestamp: Date.now() };
-  chats.unshift(chat);
-  renderChatItem(chat);
-  currentChatId = id;
-  return chat;
-}
-function addMessageToCurrentChat(text, role) {
-  const chat = ensureChatExists();
-  chat.messages.push({ role, text, time: formatTime() });
-  if (role === 'user' && !chat.title && chat.messages.filter(m=>m.role==='user').length===1) {
-    chat.title = truncate(text);
-    saveChats();
-    renderChatItem(chat);
-  } else saveChats();
-}
-function renderChatItem(chat) {
-  const existing = document.querySelector(`[data-id="${chat.id}"]`);
-  if (existing) existing.remove();
-  const item = document.createElement('div');
-  item.className = 'chat-item';
-  item.dataset.id = chat.id;
-  const title = chat.title || truncate(chat.messages[0]?.text || 'New Chat');
-  item.innerHTML = `<div class="chat-preview"><span class="chat-title-text">${title}</span></div><button class="delete-btn">×</button>`;
-  item.querySelector('.chat-preview').onclick = e => { e.stopPropagation(); loadChat(chat.id); };
-  item.querySelector('.delete-btn').onclick = e => { e.stopPropagation(); deleteChat(chat.id); };
-  chatHistory.insertBefore(item, chatHistory.firstChild);
-}
-function loadChat(id) {
-  const chat = chats.find(c => c.id === id);
-  if (!chat) return;
-  messagesEl.innerHTML = '';
-  chat.messages.forEach(m => addMessageToDOM(m.text, m.role));
-  currentChatId = id;
-  updateActiveChat();
-}
-function deleteChat(id) {
-  chats = chats.filter(c => c.id !== id);
-  saveChats();
-  document.querySelector(`[data-id="${id}"]`)?.remove();
-  if (currentChatId === id) newChat();
-}
-function updateActiveChat() {
-  document.querySelectorAll('.chat-item').forEach(i => i.classList.toggle('active', Number(i.dataset.id) === currentChatId));
-}
-
-// === Bot ===
-
-async function botReply(input) {
-  const trimmed = input.trim();
-  const lower   = trimmed.toLowerCase();
-
-  // 1) Semantic / event-based Quran search using topics_generated.json
-  if (
-    lower.includes("find the ayah where") ||
-    lower.includes("find the verse where") ||
-    (lower.includes("where") && lower.includes("ayah")) ||
-    (lower.includes("where") && lower.includes("verse"))
-  ) {
-    return searchTopicSemantic(lower);
-  }
-
-  // 2) Chapter first-N: "find chapter 2 first 20 ayahs"
-  const chapterFirstMatch = lower.match(/^find\s+chapter\s+(\d+)\s+first\s+(\d+)\s+ayahs?/);
-  if (chapterFirstMatch) {
-    const surahNum = parseInt(chapterFirstMatch[1], 10);
-    const count    = parseInt(chapterFirstMatch[2], 10);
-    return getChapterRange(surahNum, 1, count);
-  }
-
-  // 3) Chapter range: "find chapter 2 ayahs 1-50"
-  const chapterRangeMatch = lower.match(/^find\s+chapter\s+(\d+)\s+ayahs?\s+(\d+)\s*-\s*(\d+)/);
-  if (chapterRangeMatch) {
-    const surahNum = parseInt(chapterRangeMatch[1], 10);
-    const startAyah  = parseInt(chapterRangeMatch[2], 10);
-    const endAyah    = parseInt(chapterRangeMatch[3], 10);
-    return getChapterRange(surahNum, startAyah, endAyah);
-  }
-
-  // 4) Full chapter: "find chapter 2"
-  const chapterOnlyMatch = lower.match(/^find\s+chapter\s+(\d+)$/);
-  if (chapterOnlyMatch) {
-    const surahNum = parseInt(chapterOnlyMatch[1], 10);
-    const surahIndex = surahNum - 1;
-    if (surahIndex < 0 || surahIndex >= quranData.length) {
-      return `Surah ${surahNum} not found.`;
+        return html;
+      }
+      return null;
     }
-    const surah = quranData[surahIndex];
-    let output = `
-      <strong>Surah #${surahNum}: ${surah.name} (${surah.transliteration || ""})</strong><br><br>
-    `;
-    surah.verses.forEach(v => {
-      output += `
-        <div class="result-block">
-          <b>Ayah ${v.id}</b><br>
-          <span dir="rtl" lang="ar">${v.text}</span>
-        </div>
-        <hr>
-      `;
+
+    function escapeHtml(str){
+      if(str === undefined || str === null) return "";
+      return String(str).replace(/[&<>"']/g, function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;'}[m]; });
+    }
+
+    // ---------- SEND HANDLER ----------
+    function sendMessage(){
+      var text = inputEl.value.trim();
+      if(!text) return;
+      appendUser(text);
+      inputEl.value = "";
+      sendBtn.disabled = true;
+
+      var qRes = processQuranRequest(text);
+      if(qRes !== null){
+        appendBotHtml(qRes);
+        return;
+      }
+
+      // fallback
+      appendBotHtml("I couldn't detect a Quran query. Try 'find chapter 2' or '2:255' or 'chapter 1 verse 1'.");
+    }
+
+    sendBtn.addEventListener("click", sendMessage);
+    inputEl.addEventListener("input", function(){ sendBtn.disabled = !inputEl.value.trim(); });
+    inputEl.addEventListener("keydown", function(e){ if(e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); } });
+
+    // ---------- quick buttons ----------
+    islamBtn.addEventListener("click", function(){
+      inputEl.value = "What does Islam say about ";
+      inputEl.focus();
+      sendBtn.disabled = false;
     });
-    return output;
-  }
+    findBtn.addEventListener("click", function(){
+      inputEl.value = "find chapter ";
+      inputEl.focus();
+      sendBtn.disabled = false;
+    });
 
-  // 5) Generic "find ..." → Quran + Hadith keyword search
-  if (lower.startsWith('find ')) {
-    return searchJsonFiles(trimmed.slice(5).trim());
-  }
+    // ---------- AUTH ----------
+    closeAuthBtn.addEventListener("click", function(){ authScreen.style.display = "none"; authMsg.textContent = ""; });
+    loginBtn.addEventListener("click", async function(){
+      try{
+        await signInWithEmailAndPassword(auth, authEmail.value, authPass.value);
+        authScreen.style.display = "none";
+        authMsg.textContent = "";
+      } catch(err){
+        authMsg.textContent = err.message || "Login failed";
+      }
+    });
+    registerBtn.addEventListener("click", async function(){
+      try{
+        const cred = await createUserWithEmailAndPassword(auth, authEmail.value, authPass.value);
+        await setDoc(doc(db, "users", cred.user.uid), { email: authEmail.value, createdAt: serverTimestamp() });
+        authScreen.style.display = "none";
+        authMsg.textContent = "";
+      } catch(err){
+        authMsg.textContent = err.message || "Register failed";
+      }
+    });
 
-  // 6) Greetings
-  if (["hi","hii","hello","hey","salam","assalamualaikum","assalamualaikum warahmatullah","assalamualikum warahmatullah-e-wabarakatuhu"].includes(lower)) {
-    return "Assalamualikum Warahmatullah-e-Wabarakatuhu! How can I assist you today?";
-  }
+    onAuthStateChanged(auth, function(user){
+      currentUser = user;
+      if(user){
+        appendBotHtml("Signed in as: " + escapeHtml(user.email));
+      } else {
+        appendBotHtml("You are not signed in. Sign in to save chats.");
+      }
+    });
 
-  // 7) Thanks
-  if (lower.includes("thank")) {
-    return "You're welcome! Is there anything else I can help with?";
-  }
-
-  // 8) Help message fallback
-  return `
-<b>📘 Available Commands</b><br><br>
-
-<b>🔍 Quran Search</b><br>
-• Find mercy<br>
-• Find الرحمن<br>
-• Find chapter 2<br>
-• Find chapter 2 first 20 ayahs<br>
-• Find chapter 2 ayahs 1-50<br><br>
-
-<b>🕌 Islamic Topics</b><br>
-• What does Islam say about modesty<br>
-• What does Islam say about arrogance<br>
-• What does Islam say about charity<br><br>
-
-<b>🧠 Semantic / Event Search</b><br>
-• Find the ayah where angels bowed<br>
-• Find the verse where Musa split the sea<br>
-• Find the ayah where fasting became obligatory<br><br>
-
-<b>📚 Hadith Search</b><br>
-• Find hadith about intentions<br>
-• Find hadith about anger<br><br>
-
-<b>⚙️ Buttons</b><br>
-• “?” button → What does Islam say about …<br>
-• “🔍” button → Find …<br>
-  `;
-}
-
-
-// === Events ===
-newChatBtn.addEventListener('click', newChat);
-userInput.addEventListener('input', () => sendBtn.disabled = !userInput.value.trim());
-userInput.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-sendBtn.addEventListener('click', sendMessage);
-
-async function sendMessage() {
-  const text = userInput.value.trim();
-  if (!text) return;
-  addMessageToDOM(text, 'user');
-  addMessageToCurrentChat(text, 'user');
-  userInput.value = ''; sendBtn.disabled = true;
-  showTyping();
-  const reply = await botReply(text);
-  addMessageToDOM(reply, 'bot');
-  addMessageToCurrentChat(reply, 'bot');
-}
-
-// === Init ===
-function initChats() {
-  chatHistory.innerHTML = '';
-  chats.forEach(renderChatItem);
-  chats.length ? loadChat(chats[0].id) : newChat();
-  updateActiveChat();
-}
-initChats();
-userInput.focus();
-</script>
-
-<script type="text/javascript">
-function googleTranslateElementInit() {
-  new google.translate.TranslateElement(
-    {
-      pageLanguage: 'en',
-      includedLanguages: 'en,ur,ar,hi,fr,de,tr,id',
-      layout: google.translate.TranslateElement.InlineLayout.SIMPLE
-    },
-    'google_translate_element'
-  );
-}
-
-// === Quick-insert buttons ===
-document.getElementById("islamBtn").addEventListener("click", function () {
-  userInput.value = "What does Islam say about ";
-  userInput.focus();
-  const len = userInput.value.length;
-  userInput.setSelectionRange(len, len);
-  sendBtn.disabled = false;
-});
-
-document.getElementById("findBtn").addEventListener("click", function () {
-  userInput.value = "Find ";
-  userInput.focus();
-  userInput.setSelectionRange(5, 5);
-  sendBtn.disabled = false;
-});
-
-userInput.addEventListener("input", () => {
-  userInput.style.height = "auto";
-  userInput.style.height = userInput.scrollHeight + "px";
-});
-
-</script>
-
-<script src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-
+  </script>
 </body>
 </html>
